@@ -29,11 +29,14 @@ The following Python modules are included:
 - `ensemble.py` — Bagging ensemble methods.
 - `majority_vote.py` — Example baseline (majority vote, not part of the core deliverables).
 - `utils.py` — Helper functions for data loading, saving, and evaluation.
+- `data` - Primary Data
 
 **Project instructions and requirements:** see `Project.pdf` in this repository.
 
 ## Current Project Structure
 
+```
+csc311-group-project/
 ├── ensemble.py
 ├── item_response.py
 ├── knn.py
@@ -45,7 +48,13 @@ The following Python modules are included:
 ├── README.md
 ├── LICENSE
 ├── .gitignore
-└── data
+└── data/
+    ├── train_data.csv
+    ├── valid_data.csv
+    ├── test_data.csv
+    ├── private_test_data.csv
+    └── train_sparse.npz
+```
 
 ## Data
 
@@ -78,7 +87,7 @@ See [Project.pdf](Project.pdf) for detailed requirements and attribution of the 
 
 ## License
 
-See [LICENSE](LICENSE) for terms.
+See [LICENSE](LICENSE.txt) for terms.
 
 ---
 
