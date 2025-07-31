@@ -1,6 +1,7 @@
 import numpy as np
+np.random.seed(2025)
 from scipy.linalg import sqrtm
-
+import matplotlib.pyplot as plt
 from utils import (
     load_train_csv,
     load_valid_csv,
@@ -84,6 +85,14 @@ def update_u_z(train_data, lr, u, z):
     c = train_data["is_correct"][i]
     n = train_data["user_id"][i]
     q = train_data["question_id"][i]
+
+    pred = np.dot(u[n], z[q])
+    error = c - pred
+
+    u_n_old = u[n].copy()
+    u[n] += lr * error * z[q]
+    z[q] += lr * error * u_n_old
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -113,12 +122,30 @@ def als(train_data, k, lr, num_iteration):
     # TODO:                                                             #
     # Implement the function as described in the docstring.             #
     #####################################################################
-    mat = None
+
+    for _ in range(num_iteration):
+        u, z = update_u_z(train_data, lr, u, z)
+    mat = np.dot(u, z.T)
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
     return mat
 
+def als_with_records(train_data, val_data, k, lr, num_iter, eval_every=1000):
+    # new version with record
+    num_users = len(set(train_data["user_id"]))
+    num_items = len(set(train_data["question_id"]))
+    u = np.random.uniform(0, 1/np.sqrt(k), (num_users, k))
+    z = np.random.uniform(0, 1/np.sqrt(k), (num_items, k))
+
+    iters, tr_losses, vl_losses = [], [], []
+    for it in range(1, num_iter+1):
+        u, z = update_u_z(train_data, lr, u, z)
+        if it % eval_every == 0 or it == 1:
+            iters.append(it)
+            tr_losses.append(squared_error_loss(train_data, u, z))
+            vl_losses.append(squared_error_loss(val_data, u, z))
+    return iters, tr_losses, vl_losses
 
 def main():
     train_matrix = load_train_sparse("./data").toarray()
@@ -131,7 +158,17 @@ def main():
     # (SVD) Try out at least 5 different k and select the best k        #
     # using the validation set.                                         #
     #####################################################################
-    pass
+    k_list = [10, 20, 30, 40, 50]
+
+    best_k, best_val_acc, best_test_acc = None, -1, None
+    for k in k_list:
+        reconst = svd_reconstruct(train_matrix, k)
+        val_acc = sparse_matrix_evaluate(val_data, reconst)
+        test_acc = sparse_matrix_evaluate(test_data, reconst)
+        print(f"SVD k={k}: val_acc={val_acc:.4f}, test_acc={test_acc:.4f}")
+        if val_acc > best_val_acc:
+            best_k, best_val_acc, best_test_acc = k, val_acc, test_acc
+    print(f"Best SVD -> k={best_k}, val={best_val_acc:.4f}, test={best_test_acc:.4f}\n")
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -141,7 +178,37 @@ def main():
     # (ALS) Try out at least 5 different k and select the best k        #
     # using the validation set.                                         #
     #####################################################################
-    pass
+    ks  = [5, 10, 20, 30, 40]
+    lrs = [0.005, 0.01, 0.02]
+    iters = [10000, 20000, 50000]
+    best = {"val_acc": -1}
+    for k in ks:
+        for lr in lrs:
+            for num_iter in iters:
+                print(f"ALS k={k}, lr={lr}, iters={num_iter}")
+                reconst = als(train_data, k, lr, num_iter)
+                val_acc = sparse_matrix_evaluate(val_data, reconst)
+                test_acc= sparse_matrix_evaluate(test_data, reconst)
+                print(f"  -> val_acc={val_acc:.4f}, test_acc={test_acc:.4f}")
+                if val_acc > best["val_acc"]:
+                    best.update({"k":k, "lr":lr, "iters":num_iter,
+                                 "val_acc":val_acc, "test_acc":test_acc})
+    print(f"\nBest ALS -> {best}")
+
+    # (e) Plot training & validation loss curves
+    iters, tr_l, vl_l = als_with_records(
+        train_data, val_data,
+        best["k"], best["lr"], best["iters"],
+        eval_every=max(1, best["iters"] // 20)
+    )
+    plt.plot(iters, tr_l, label="train loss")
+    plt.plot(iters, vl_l, label="val loss")
+    plt.xlabel("SGD iterations")
+    plt.ylabel("0.5 * squared-error loss")
+    plt.title(f"ALS Loss (k={best['k']}, lr={best['lr']})")
+    plt.legend()
+    plt.savefig('als_q5.png')
+    plt.show()
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################

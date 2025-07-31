@@ -26,7 +26,8 @@ def knn_impute_by_user(matrix, valid_data, k):
     # We use NaN-Euclidean distance measure.
     mat = nbrs.fit_transform(matrix)
     acc = sparse_matrix_evaluate(valid_data, mat)
-    print("Validation Accuracy: {}".format(acc))
+    # print("Validation Accuracy: {}".format(acc))
+    print(f"Validation Accuracy (user-based, k={k}): {acc:.4f}")
     return acc
 
 
@@ -44,7 +45,11 @@ def knn_impute_by_item(matrix, valid_data, k):
     # TODO:                                                             #
     # Implement the function as described in the docstring.             #
     #####################################################################
-    acc = None
+    imputer = KNNImputer(n_neighbors=k)
+    filled_transposed = imputer.fit_transform(matrix.T)
+    filled = filled_transposed.T
+    acc = sparse_matrix_evaluate(valid_data, filled)
+    print(f"Validation Accuracy (item-based, k={k}): {acc:.4f}")
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -67,7 +72,44 @@ def main():
     # the best performance and report the test accuracy with the        #
     # chosen k*.                                                        #
     #####################################################################
-    pass
+    k_list = [1, 6, 11, 16, 21, 26]
+    user_val_acc = []
+    item_val_acc = []
+
+    # Compute validation accuracy
+    for k in k_list:
+        acc_u = knn_impute_by_user(sparse_matrix, val_data, k)
+        acc_i = knn_impute_by_item(sparse_matrix, val_data, k)
+        user_val_acc.append(acc_u)
+        item_val_acc.append(acc_i)
+
+    # Plot
+    plt.figure()
+    plt.plot(k_list, user_val_acc, marker='o', label='user-based')
+    plt.plot(k_list, item_val_acc, marker='o', label='item-based')
+    plt.xlabel('k (number of neighbors)')
+    plt.ylabel('Validation Accuracy')
+    plt.title('KNN Performance')
+    plt.legend()
+    plt.grid(True)
+    # plt.savefig('knn_q1.png')
+    plt.savefig('knn_q3.png')
+    plt.show()
+
+    # Select best k*
+    best_u_idx = int(np.argmax(user_val_acc))
+    best_i_idx = int(np.argmax(item_val_acc))
+    best_k_user = k_list[best_u_idx]
+    best_k_item = k_list[best_i_idx]
+    print(f"Chosen k* for user-based: {best_k_user} (val acc = {user_val_acc[best_u_idx]:.4f})")
+    print(f"Chosen k* for item-based: {best_k_item} (val acc = {item_val_acc[best_i_idx]:.4f})")
+
+    # Evaluate
+    test_acc_user = knn_impute_by_user(sparse_matrix, test_data, best_k_user)
+    test_acc_item = knn_impute_by_item(sparse_matrix, test_data, best_k_item)
+    print(f"Test accuracy (user-based, k={best_k_user}): {test_acc_user:.4f}")
+    print(f"Test accuracy (item-based, k={best_k_item}): {test_acc_item:.4f}")
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
