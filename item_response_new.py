@@ -236,7 +236,6 @@ def main():
     print(f"Validation Accuracy: {evaluate(val_data, final_theta, final_beta, final_alpha):.4f}")
     print(f"Test Accuracy: {evaluate(test_data, final_theta, final_beta, final_alpha):.4f}")
 
-    # Save parameters for future use
     np.savez('irt_params.npz',
              theta=final_theta,
              beta=final_beta,
